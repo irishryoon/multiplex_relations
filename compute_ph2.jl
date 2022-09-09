@@ -256,9 +256,9 @@ function getDowkerfeatures(dimension, sims, celltype1, celltype2, sz, var)
         #P1S[i] = P1
         #P2S[i] = P2
         if length(P1) < length(P2)
-            D_P1_P2 =  Images.pairwise(Euclidean(), P1, P2, dims = 1)
+            D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P1, P2, dims = 1)
         else
-            D_P1_P2 =  Images.pairwise(Euclidean(), P2, P1, dims = 1)
+            D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P2, P1, dims = 1)
         end
         #println("starting witness persistence, i= ",i," out of: ",N)
         W_P1_P2 = ext.compute_Witness_persistence(D_P1_P2, maxdim = 1)
