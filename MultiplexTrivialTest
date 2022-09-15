@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug 29 12:44:38 2022
+
+@author: user
+"""
+
+
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import statistics
+import scipy.spatial
+from sklearn.cluster import KMeans
+
+
+def average_distance_to_nearest_vessel(data, celltype,vessel_coords):
+    
+    celltype_coords = np.empty((0,2), int)
+    
+    celltype_x = data.loc[data["celltypes"] == celltype, "points_x"]
+    celltype_y = data.loc[data["celltypes"] == celltype, "points_y"]
+
+    for vertex in range(len(celltype_x)):
+        
+        celltype_coords = np.append(celltype_coords,[[celltype_x.iloc[vertex],celltype_y.iloc[vertex]]],axis = 0) 
+    
+    dist_vessels = scipy.spatial.distance.cdist(celltype_coords,vessel_coords)
+    
+    min_values = dist_vessels.min(axis=1)
+    
+    if min_values.size > 0:
+    
+        avg_distance = statistics.mean(min_values)
+        
+    else :
+        avg_distance = 5000 #float('inf')
+    
+    
+    return avg_distance
+
+
+path = '/Users/user/Desktop/Multiplex Project/JoshData/17082022_all2Params_t500/'
+
+
+param_info = pd.read_csv('/Users/user/Desktop/Multiplex Project/params_file.csv') 
+
+
+classification_vectors = np.empty((0,6),float)
+chi_macrophageToCSF= np.empty((0),float) 
+halfMaximalExtravasationCsf1Conc = np.empty((0),float)	
+
+for filenr in range(1,1621):
+    
+    file = "ID-{}_time-500_From2ParamSweep_Data.csv".format(filenr)
+    print(file)
+    
+    if (os.path.exists(path+file) == 0) or (filenr == 1223):
+        
+        continue
+    
+    data = pd.read_csv(path+file) 
+    
+    chi_macrophageToCSF = np.append(chi_macrophageToCSF,[param_info.iloc[filenr-1]['chi_macrophageToCSF'].round(decimals=1)],axis = 0)
+    halfMaximalExtravasationCsf1Conc= np.append(halfMaximalExtravasationCsf1Conc,[param_info.iloc[filenr-1]['halfMaximalExtravasationCsf1Conc'].round(decimals=1)],axis = 0)
+    
+    number_of_tumour_cells = len(np.where(data['celltypes'] == 'Tumour')[0])
+    number_of_macrophage_cells = len(np.where(data['celltypes'] == 'Macrophage')[0])
+    number_of_necrotic_cells = len(np.where(data['celltypes'] == 'Necrotic')[0])
+    
+    # Get coordinates of vessels
+    vessel_coords = np.empty((0,2), int)
+
+    vessel_x = data.loc[data["celltypes"] == "Vessel", "points_x"]
+    vessel_y = data.loc[data["celltypes"] == "Vessel", "points_y"]
+
+    for vertex in range(len(vessel_x)):
+        
+        vessel_coords = np.append(vessel_coords,[[vessel_x.iloc[vertex],vessel_y.iloc[vertex]]],axis = 0) 
+    
+    macrophage_distance_to_nearest_vessel = average_distance_to_nearest_vessel(data, 'Macrophage',vessel_coords)
+    necrotic_distance_to_nearest_vessel = average_distance_to_nearest_vessel(data, 'Necrotic',vessel_coords)
+    macrophage_distance_to_nearest_vessel = average_distance_to_nearest_vessel(data, 'Tumour',vessel_coords)
+    
+    classification_vectors = np.append(classification_vectors,[[number_of_tumour_cells,number_of_macrophage_cells,number_of_necrotic_cells,macrophage_distance_to_nearest_vessel,necrotic_distance_to_nearest_vessel,macrophage_distance_to_nearest_vessel]],axis = 0)
+    
+    
+kmeans = KMeans(n_clusters=4, random_state=0).fit(classification_vectors)
+labels = kmeans.labels_
+
+
+
+show_labels = np.empty((0,3),float)
+show_purity = np.empty((0,3),float)
+
+for chi in [0.5,1,1.5,2,2.5,3,3.5,4,4.5]:
+    
+    for Csf1 in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
+    
+        indices = np.where((chi_macrophageToCSF == chi) & (halfMaximalExtravasationCsf1Conc == Csf1))
+        
+        if np.array(indices).size == 0:
+            continue
+        
+        z = np.bincount(labels[indices]).argmax()
+        purity = len(np.where(labels[indices] == z)[0])/len(labels[indices])
+
+
+        show_labels = np.append(show_labels,[[Csf1, chi, z]], axis = 0)
+        show_purity = np.append(show_purity,[[Csf1, chi, purity]], axis = 0)
+
+
+mapping= {0: ("blue", "o"), 1: ("red", "o"), 2: ("yellow","o"),3: ("white","o")}
+
+#mapping= {0: ("blue", "o"), 1: ("red", "o"), 2: ("yellow","o")}
+
+for c in np.unique(show_labels[:,2]):
+    d = show_labels[show_labels[:,2] == c]
+    plt.scatter(d[:,0], d[:,1], s=400, c=mapping[c][0], marker=mapping[c][1])
+
+plt.title('Trivial clusters')
+plt.xlabel('Csf1')
+plt.ylabel('chi')
+plt.show()
+
+plt.scatter(show_purity[:,0], show_purity[:,1], s=400, c=show_purity[:,2], marker="o", vmin=0, vmax=1)
+plt.title('Purity trivial clusters')
+plt.xlabel('Csf1')
+plt.ylabel('chi')
+plt.colorbar()
+plt.show()
+
+
+
+   
+    
