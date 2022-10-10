@@ -141,6 +141,18 @@ function getBinaryLabels(sims)
     end
     return labels
 end
+function getBinaryLabel(id,time)
+    M2 = getNumberOf(id,time,"proTumourMacrophage")
+    M1plusM2 = getNumberOf(id,time,"Macrophage")
+    if (M2==nothing || M1plusM2==nothing)
+        return 0
+    elseif (M2 / M1plusM2 > 0.5)
+        return 1
+    else
+        return 0
+    end
+end
+
 function getConcentrationLabels(sims)
     labels = []
     for sim in sims
@@ -236,6 +248,68 @@ function cleanSimsDowker(sims,celltype1,celltype2)
     end
     return sims
 end
+function getDowkerPersistenceDiagram(id,time,celltype1,celltype2)
+    P1_ = getpos(id,time,celltype1)
+    P2_ = getpos(id,time,celltype2)
+    P1 = zeros(Float64,length(P1_),2);
+    P2 = zeros(Float64,length(P2_),2);
+    for i in 1:length(P1_)
+        P1[i,1] = P1_[i][1]
+        P1[i,2] = P1_[i][2]
+    end
+    for i in 1:length(P2_)
+        P2[i,1] = P2_[i][1]
+        P2[i,2] = P2_[i][2]
+    end
+    if length(P1) < length(P2)
+        D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P1, P2, dims = 1)
+    else
+        D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P2, P1, dims = 1)
+    end
+    W_P1_P2 = ext.compute_Witness_persistence(D_P1_P2, maxdim = 1)
+    W_barcode0 = Eirene.barcode(W_P1_P2["eirene_output"], dim = 0);
+    W_barcode1 = Eirene.barcode(W_P1_P2["eirene_output"], dim = 1);
+    n0 = size(W_barcode0,1)
+    n1 = size(W_barcode1,1)
+    W_diag0 = PersistenceDiagram([(W_barcode0[i,1], W_barcode0[i,2]) for i = 1:n0],dim=0)
+    W_diag1 = PersistenceDiagram([(W_barcode1[i,1], W_barcode1[i,2]) for i = 1:n1],dim=1)
+    return [W_diag0,W_diag1]
+end
+function getDowkerTimePersistenceDiagram(id,time,celltype)
+    P1_ = 0
+    P2_ = 0
+    if (time == 250 || !isfile(getpath(id,time-50,celltype)))
+        P1_ = getpos(id,time,celltype)
+        P2_ = getpos(id,time,celltype)
+    else
+        P1_ = getpos(id,time,celltype)
+        P2_ = getpos(id,time-50,celltype)
+    end
+    P1 = zeros(Float64,length(P1_),2);
+    P2 = zeros(Float64,length(P2_),2);
+    for i in 1:length(P1_)
+        P1[i,1] = P1_[i][1]
+        P1[i,2] = P1_[i][2]
+    end
+    for i in 1:length(P2_)
+        P2[i,1] = P2_[i][1]
+        P2[i,2] = P2_[i][2]
+    end
+    if length(P1) < length(P2)
+        D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P1, P2, dims = 1)
+    else
+        D_P1_P2 =  Images.ImageDistances.pairwise(Euclidean(), P2, P1, dims = 1)
+    end
+    W_P1_P2 = ext.compute_Witness_persistence(D_P1_P2, maxdim = 1)
+    W_barcode0 = Eirene.barcode(W_P1_P2["eirene_output"], dim = 0);
+    W_barcode1 = Eirene.barcode(W_P1_P2["eirene_output"], dim = 1);
+    n0 = size(W_barcode0,1)
+    n1 = size(W_barcode1,1)
+    W_diag0 = PersistenceDiagram([(W_barcode0[i,1], W_barcode0[i,2]) for i = 1:n0],dim=0)
+    W_diag1 = PersistenceDiagram([(W_barcode1[i,1], W_barcode1[i,2]) for i = 1:n1],dim=1)
+    return [W_diag0,W_diag1]
+    
+end
 function getDowkerfeatures(dimension, sims, celltype1, celltype2, sz, var)
     N = length(sims)
     W_diags_all = []
@@ -279,4 +353,17 @@ function getDowkerfeatures(dimension, sims, celltype1, celltype2, sz, var)
     end
     full_matrix = mapreduce(permutedims, vcat, vector_features)
     return full_matrix
+end
+function save_diagram(path,diagram)
+    birth_death_pairs = [(diagram[i][1], diagram[i][2]) for i = 1:length(diagram)]
+    save_object(path,birth_death_pairs)
+end
+function load_diagram(path, dimension)
+    birth_death_pairs = load_object(path)
+    return PersistenceDiagram(birth_death_pairs;dim = dimension)
+end
+function parse_file(file)
+    id = split(file,"_")[1]
+    time = split(file,"_")[2]
+    return (id,time)
 end
