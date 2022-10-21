@@ -7,6 +7,8 @@ using Images
 using LinearAlgebra
 using JLD
 using Random
+using CSV
+using DataFrames
 include("extension_method.jl")
 function getpath(id,time,celltype)
     if celltype == "Macrophage"
@@ -32,8 +34,8 @@ end
 function getNumberOf(id,time,celltype)
     file = getpath(id,time,celltype);
     if isfile(file)
-        a = ezread(file);  
-        numof = length(a[2:end-1,1]);
+        a = CSV.read(file, DataFrame)
+        numof = length(a.points_x)
         return numof;
     else
         return 0;
