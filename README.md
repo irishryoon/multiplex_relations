@@ -16,4 +16,4 @@ In the `dowker analysis` folder:
 # Multispecies Witness PH
 - `MultiplexTrivialTest.py` performs k-means clustering on non topological features
 - `MultiplexWitnessPH.py` performs k-means clustering on the topological distance vectors computed via Multispecies PH of the point cloud data without knowledge of macrophage phenotype
-- `MultiplexWitnessPH.py` performs k-means clustering on the topological distance vectors computed via Multispecies PH of the point cloud data with knowledge of macrophage phenotype
+- `MultiplexWitnessPHM1M2.py` performs k-means clustering on the topological distance vectors computed via Multispecies PH of the point cloud data with knowledge of macrophage phenotype
