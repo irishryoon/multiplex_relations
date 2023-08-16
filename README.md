@@ -1,8 +1,7 @@
 # Relational persistent homology (PH) for tumor-immune point clouds
 
 We use Dowker PH and Multispecies Witness PH to vectorise point clouds for input to ML algorithms.
-Please see the preprint [Relational persistent homology for multispecies data with application to the tumor microenvironment]
-(https://arxiv.org/abs/2308.06205) for details.
+Please see the preprint [Relational persistent homology for multispecies data with application to the tumor microenvironment](https://arxiv.org/abs/2308.06205) for details.
 # Dowker PH
 In the `dowker analysis` folder:
 - `compute_persistence_diagrams.ipynb` computes Vietoris-Rips (via [Ripser](https://mtsch.github.io/Ripserer.jl/dev/)) and Dowker persistence diagrams (via `extension_method.jl`  - see https://github.com/irishryoon/Dowker_persistence) on the point cloud data 
